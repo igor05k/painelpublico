@@ -118,11 +118,27 @@ class ChamberVoteSegmentsTests(unittest.TestCase):
         with self.assertRaisesRegex(CollectionError, "relatório não corresponde"):
             self.build([segment_review()], api=SegmentAPI(registered="14:00:00"))
 
+    def test_missing_no_count_in_the_api_comes_from_the_report_with_a_note(self):
+        api = SegmentAPI(description="Rejeitada a Emenda de Plenário nº 1. Sim: 1; Total: 3.")
+        snapshot, _ = self.build([segment_review()], api=api)
+        segment = snapshot["items"][0]["segments"][0]
+        self.assertEqual(segment["tally"]["no"], 2)
+        self.assertIn("relatório nominal", segment["dataNotes"][-1])
+
     def test_segment_needs_a_published_parent_of_the_same_proposition(self):
         with self.assertRaisesRegex(CollectionError, "sem votação principal"):
             self.build([segment_review(parentId="999-1")])
         with self.assertRaisesRegex(CollectionError, "ID válido"):
             self.build([segment_review(id=VOTE_ID)])
+
+    def test_segment_cannot_predate_its_main_vote(self):
+        data = segment_inventory()
+        data["entries"][1]["date"] = "2026-10-08"
+        api = SegmentAPI()
+        api.segment["data"] = "2026-10-08"
+        with self.assertRaisesRegex(CollectionError, "outra votação principal"):
+            chamber_votes.build_catalogue(data, [review()], root=Path(tempfile.mkdtemp(dir=self.root)), collect=True,
+                                          request=api, segment_reviews=[segment_review()])
 
     def test_unconfirmed_segment_needs_a_reason_and_is_not_published(self):
         snapshot, _ = self.build([segment_review(status="pending", reason="texto ainda não conferido")])

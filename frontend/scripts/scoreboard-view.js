@@ -57,11 +57,11 @@ function scoreboardSegments(segments) {
   const rows = Array.isArray(segments) ? segments.filter(segment => SCOREBOARD_VOTE_ID.test(scoreboardText(segment?.id))) : [];
   if (!rows.length) return '';
   return `<section class="card wide scoreboard-segments"><span class="k">Decisões sobre trechos do projeto</span>
-    <p class="muted">Na mesma sessão, a Câmara votou separadamente ${rows.length === 1 ? 'esta parte' : `estas ${rows.length} partes`} do texto, com o voto de cada deputado. Um deputado pode apoiar o projeto e votar contra um trecho.</p>
+    <p class="muted">Depois do texto principal, a Câmara votou separadamente ${rows.length === 1 ? 'esta parte' : `estas ${rows.length} partes`} do texto, com o voto de cada deputado. Um deputado pode apoiar o projeto e votar contra um trecho.</p>
     <ol class="scoreboard-segment-list">${rows.map(segment => {
       const tally = segment.tally || {};
       return `<li class="scoreboard-segment">
-        <p class="scoreboard-segment-kind">${scoreboardEscape(SCOREBOARD_SEGMENT_KINDS[segment.kind] || 'Decisão sobre um trecho')}</p>
+        <p class="scoreboard-segment-kind">${scoreboardEscape(SCOREBOARD_SEGMENT_KINDS[segment.kind] || 'Decisão sobre um trecho')} · ${scoreboardEscape(scoreboardDate(segment.date))}</p>
         <h3>${scoreboardEscape(segment.title || 'Título não informado')}</h3>
         ${segment.summary ? `<p>${scoreboardEscape(segment.summary)}</p>` : ''}
         <dl class="scoreboard-segment-meaning"><div><dt><i class="vote-yes"></i>Sim</dt><dd>${scoreboardEscape(segment.yesMeaning || 'Não informado')}</dd></div><div><dt><i class="vote-no"></i>Não</dt><dd>${scoreboardEscape(segment.noMeaning || 'Não informado')}</dd></div></dl>
@@ -74,7 +74,7 @@ function scoreboardSegments(segments) {
 function scoreboardParentDecision(parent) {
   if (!parent || !SCOREBOARD_VOTE_ID.test(scoreboardText(parent.id))) return '';
   return `<section class="card scoreboard-related" role="note"><span class="k">Parte de uma votação maior</span>
-    <p>Esta é uma decisão sobre um trecho, votada na mesma sessão do texto principal: <strong>${scoreboardEscape(parent.title || 'texto principal')}</strong> (${scoreboardEscape(scoreboardOutcome(parent.outcome).toLowerCase())}).</p>
+    <p>Esta é uma decisão sobre um trecho, ressalvado na votação do texto principal: <strong>${scoreboardEscape(parent.title || 'texto principal')}</strong> (${scoreboardEscape(scoreboardOutcome(parent.outcome).toLowerCase())}).</p>
     <button type="button" class="more" data-vote="${scoreboardEscape(parent.id)}">Ver a votação do texto principal →</button></section>`;
 }
 function scoreboardVoteType(item) {
@@ -184,7 +184,7 @@ function scoreboardCoverage(data) {
     <details><summary>Como montamos este Placar e seus limites</summary>
       <p><strong>De onde vêm as votações.</strong> A Câmara publicou ${inventory} registros de votação ${timeframe}. Muitos são etapas do mesmo projeto: urgência, emendas, destaques, procedimentos e redação final. Ficamos só com as votações do texto principal de PL, PLP e PEC no Plenário. Votações simbólicas (sem registro de voto de cada deputado) e outros tipos de proposta ficam de fora.</p>
       <p><strong>Como escolhemos.</strong> Dos ${inventory} registros, ${candidates} pareciam votações do texto principal. ${review}: ${excluded}${published} entraram no Placar. ${pendingNote}</p>
-      ${Number.isInteger(coverage.segmentCount) && coverage.segmentCount > 0 ? `<p><strong>Decisões sobre trechos.</strong> Em alguns projetos, mostramos também ${scoreboardCount(coverage.segmentCount)} ${coverage.segmentCount === 1 ? 'votação nominal' : 'votações nominais'} de destaques e emendas da mesma sessão, com o que significava votar Sim e Não. É um piloto: cada uma é conferida no relatório nominal e no texto oficial do destaque ou da emenda, e elas não entram na contagem acima nem nas comparações entre deputados e partidos.</p>` : ''}
+      ${Number.isInteger(coverage.segmentCount) && coverage.segmentCount > 0 ? `<p><strong>Decisões sobre trechos.</strong> Em alguns projetos, mostramos também ${scoreboardCount(coverage.segmentCount)} ${coverage.segmentCount === 1 ? 'votação nominal' : 'votações nominais'} de destaques e emendas ressalvados no texto principal, com o que significava votar Sim e Não. É um piloto: cada uma é conferida no relatório nominal e no texto oficial do destaque ou da emenda, e elas não entram na contagem acima nem nas comparações entre deputados e partidos.</p>` : ''}
       <p><strong>Por que quase todas foram aprovadas.</strong> Antes da votação final, um projeto passa por comissões, pedidos de urgência e acordos entre os partidos. Quando não tem apoio, ele costuma parar no caminho: fica na comissão, é retirado da pauta ou é derrotado numa votação simbólica, sem registro do voto de cada deputado. As derrotas também aparecem em votações de emendas, destaques e requerimentos, que não entram aqui. Por isso, quando o texto principal chega a uma votação nominal, ele quase sempre é aprovado. Uma rejeição aqui pode ser de uma versão alternativa, como o substitutivo de uma comissão: nesse caso, a página da votação mostra a decisão seguinte, que aprovou o projeto.</p>
       <p><strong>Limites.</strong></p>
       <ul>${gaps}

@@ -305,7 +305,7 @@ class VoteSnapshotTests(unittest.TestCase):
         self.assertNotIn('2611313-35', [item['id'] for item in votes.person_votes('camara:1', self.index)['items']])
 
     def test_invalid_segments_make_the_index_unavailable(self):
-        for changes in ({'outcome': 'winner'}, {'kind': 'outro'}, {'date': '2026-09-04'}, {'id': '2611313-31'},
+        for changes in ({'outcome': 'winner'}, {'kind': 'outro'}, {'date': '2026-09-02'}, {'date': '3/9/2026'}, {'id': '2611313-31'},
                         {'sources': {'vote': 'http://camara.leg.br/x'}}, {'yesMeaning': ''}):
             with self.subTest(changes=changes):
                 self.write(self.index, self.segment_snapshot(**changes))

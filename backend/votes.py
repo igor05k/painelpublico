@@ -84,9 +84,10 @@ def _https(value):
 
 
 def _segment_item(value, parent_date):
-    """Validate one reviewed decision about part of the text, voted in the same session."""
+    """Validate one reviewed decision about part of the text, voted on or after its main vote."""
     if (not isinstance(value, dict) or not _VOTE_ID.fullmatch(str(value.get('id', '')))
-            or value.get('date') != parent_date or value.get('kind') not in _SEGMENT_KINDS
+            or not _text(value.get('date'), limit=10) or not re.fullmatch(r'\d{4}-\d{2}-\d{2}', value['date'])
+            or value['date'] < parent_date or value.get('kind') not in _SEGMENT_KINDS
             or value.get('outcome') not in _SEGMENT_OUTCOMES):
         return None
     for key, limit in (('title', 300), ('summary', 5000), ('decisionLabel', 300), ('yesMeaning', 500),

@@ -39,8 +39,12 @@ def build_segments(items, inventory_entries, reviews, *, cache, collect, refresh
         if parent is None or identifier.split('-')[0] != parent['id'].split('-')[0]:
             raise CollectionError(f'{identifier}: trecho sem votação principal publicada da mesma proposição.')
         entry = inventory_entries.get(identifier)
-        if entry is None or entry['date'] != parent['date']:
-            raise CollectionError(f'{identifier}: trecho fora do inventário ou de outra sessão.')
+        # Destaques podem ser votados em outra sessão (até meses depois do texto-base), mas pertencem
+        # à última votação principal publicada da proposição, sem outra votação principal no meio.
+        later_main = [item['id'] for item in items if item['id'].split('-')[0] == parent['id'].split('-')[0]
+                      and parent['date'] < item['date'] <= (entry or {}).get('date', '')]
+        if entry is None or entry['date'] < parent['date'] or later_main:
+            raise CollectionError(f'{identifier}: trecho fora do inventário ou de outra votação principal.')
         evidence, sources = review.get('evidence'), review.get('sources')
         if (review.get('kind') not in SEGMENT_KINDS or review.get('outcome') not in SEGMENT_OUTCOMES
                 or not valid_date(review.get('reviewedAt'))
@@ -77,12 +81,16 @@ def build_segments(items, inventory_entries, reviews, *, cache, collect, refresh
                 or not registered_after_report(report['endedAt'], record.get('dataHoraRegistro'))):
             raise CollectionError(f'{identifier}: relatório não corresponde à proposição, objeto e horário da decisão.')
         api_tally = _recorded_partial_tally(record.get('descricao'))
-        if api_tally.get('yes') is None or api_tally.get('no') is None:
+        if api_tally.get('yes') is None:
             raise CollectionError(f'{identifier}: a API não publica placar nominal.')
         for key, value in api_tally.items():
             if value is not None and report['tally'].get(key) is not None and value != report['tally'][key]:
                 raise CollectionError(f'{identifier}: placar da API diverge do relatório nominal.')
         tally = {key: value if value is not None else report['tally'].get(key) for key, value in api_tally.items()}
+        if api_tally.get('no') is None:
+            if tally['no'] is None:
+                raise CollectionError(f'{identifier}: placar nominal sem votos Não em nenhuma fonte.')
+            notes = [*notes, 'A descrição da API não traz os votos Não; a contagem vem do relatório nominal oficial.']
 
         rows, participant_sources = _paged(f'{url}/votos', cache / 'participants' / identifier,
                                            collect=collect, refresh=refresh, request=request)

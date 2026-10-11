@@ -557,8 +557,10 @@ e traz o trecho em disputa, o significado de Sim e Não, o resultado (`approved`
 `kept` ou `removed`), o objeto exato do relatório nominal e evidência de método, objeto e
 texto. A coleta (`ingest/chamber_vote_segments.py`) só publica quando:
 
-- a votação principal da mesma proposição e sessão está publicada;
-- o registro da API existe no inventário, tem a mesma data e um resultado compatível
+- a votação principal da mesma proposição está publicada e é a última antes da decisão, sem outra
+  votação principal no meio (destaques podem ficar para outra sessão: no PLP 108/2024, o texto-base
+  foi aprovado em 13/8/2024 e os destaques, em 30/10/2024);
+- o registro da API existe no inventário, não é anterior à votação principal e tem resultado compatível
   (`aprovacao` 1, 0 ou ausente para votação em separado de trecho);
 - o relatório nominal oficial tem a mesma proposição, o objeto revisado e o mesmo placar,
   e a API registrou a decisão até cinco minutos depois do encerramento;
@@ -568,6 +570,14 @@ As decisões ficam penduradas na votação principal (`segments`), com detalhe p
 geração. Não entram em `publishedCount`, na concordância entre deputados, na unidade nem nas
 comparações de partidos. O conteúdo editorial foi conferido no inteiro teor oficial de cada
 destaque (DTQ), emenda (EMP, ERD) e parecer às emendas.
+
+Segundo lote (11/10/2026), mesma regra, cinco projetos seguintes: 20 decisões em PLP 128/2025,
+PLP 163/2025, PL 4.278/2025, PLP 108/2024 (agosto/outubro de 2024 e dezembro de 2025) e
+PL 4.497/2024 (junho e dezembro de 2025). Total do piloto: 28 decisões em 10 projetos. Nos
+substitutivos do Senado (PLP 108/2024 e PL 4.497/2024), votar Sim aprova o dispositivo do Senado
+e votar Não o rejeita; vários destaques foram pedidos "para fins de aprovação". Quando a descrição
+da API omite os votos Não (Emenda Aglutinativa nº 1 ao PLP 108/2024, 403 × 0), a contagem vem do
+relatório nominal, com nota de dados.
 
 Achado: na sessão do PL 1.625/2026, o relatório nominal das 21:56 (ideVotacao 13736) registra
 182 × 182 para o mesmo destaque da emenda nº 2, que aparece nos Dados Abertos como
