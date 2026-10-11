@@ -271,6 +271,50 @@ class VoteSnapshotTests(unittest.TestCase):
         # 3 pares na primeira (1 igual) e 1 na segunda (igual): 2 de 4.
         self.assertEqual(votes.person_votes('camara:1', self.index)['pairAgreement'], 0.5)
 
+    def segment_snapshot(self, **segment_changes):
+        segment = {'id': '2611313-35', 'date': '2026-09-03', 'kind': 'destaque', 'title': 'Destaque do art. 1º',
+                   'summary': 'Destaque para retirar o art. 1º.', 'decisionLabel': 'Artigo mantido',
+                   'yesMeaning': 'Manter o art. 1º.', 'noMeaning': 'Retirar o art. 1º.', 'outcome': 'kept',
+                   'tally': {'yes': 8, 'no': 3, 'abstention': None, 'total': 11}, 'reviewedAt': '2026-10-10',
+                   'sources': {'vote': 'https://camara.leg.br/voto2', 'rollCall': 'https://camara.leg.br/lista2',
+                               'text': 'https://camara.leg.br/dtq', 'proposition': 'https://camara.leg.br/ficha-dtq'},
+                   **segment_changes}
+        items = [{**self.items[0], 'segments': [segment]}, *self.items[1:]]
+        data = snapshot(items)
+        data['coverage']['segmentCount'] = 1
+        return data
+
+    def test_segments_hang_on_the_main_vote_and_open_as_their_own_decision(self):
+        self.write(self.index, self.segment_snapshot())
+        self.write(self.root / votes.DETAILS_DIRECTORY / '2611313-35.json', {'id': '2611313-35', 'participants': [
+            {'id': 'camara:1', 'name': 'Ana', 'party': 'ABC', 'uf': 'SP', 'vote': 'Não'}],
+            'partyTotals': [{'party': 'ABC', 'yes': 0, 'no': 1, 'other': 0}]})
+        main = votes.detail('2611313-31', self.index)
+        self.assertEqual([segment['id'] for segment in main['vote']['segments']], ['2611313-35'])
+        part = votes.detail('2611313-35', self.index)
+        self.assertEqual(part['vote']['parent'], {'id': '2611313-31', 'title': 'Regras para benefícios tributários',
+                                                  'outcome': 'approved'})
+        self.assertEqual(part['vote']['proposition'], 'PLP 74/2026')
+        self.assertEqual(part['participants'][0]['vote'], 'Não')
+        listed = votes.listing({}, self.index)
+        self.assertEqual(listed['coverage']['segmentCount'], 1)
+        first = next(item for item in listed['items'] if item['id'] == '2611313-31')
+        self.assertEqual(first['segmentCount'], 1)
+        self.assertNotIn('segments', first)
+        # Concordância e votos da pessoa continuam só no texto principal.
+        self.assertNotIn('2611313-35', [item['id'] for item in votes.person_votes('camara:1', self.index)['items']])
+
+    def test_invalid_segments_make_the_index_unavailable(self):
+        for changes in ({'outcome': 'winner'}, {'kind': 'outro'}, {'date': '2026-09-04'}, {'id': '2611313-31'},
+                        {'sources': {'vote': 'http://camara.leg.br/x'}}, {'yesMeaning': ''}):
+            with self.subTest(changes=changes):
+                self.write(self.index, self.segment_snapshot(**changes))
+                self.assertFalse(votes.listing({}, self.index)['available'])
+        data = self.segment_snapshot()
+        data['coverage']['segmentCount'] = 2
+        self.write(self.index, data)
+        self.assertFalse(votes.listing({}, self.index)['available'])
+
     def test_detail_uses_selected_generation_and_tracks_index_switch_without_leaking_version(self):
         first_version, second_version = 'a' * 64, 'b' * 64
         first_details = {'participants': [

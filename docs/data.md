@@ -86,7 +86,9 @@ do ano nem do mandato. Campo não publicado,
 inclusive abstenção ou tema, permanece ausente.
 
 `make collect-votes THROUGH=2026-10-09` lê as revisões locais em
-`data/reviews/chamber-vote-reviews-2026-10-09.json` e gera
+`data/reviews/chamber-vote-reviews-2026-10-09.json` (e, quando existir,
+`data/reviews/chamber-vote-segment-reviews-2026-10-09.json`, com destaques e emendas da
+mesma sessão; ver [Metodologia do Placar](voting-scoreboard.md)) e gera
 `data/snapshots/chamber-votes.json` e `data/snapshots/chamber-vote-details/`.
 `python3 -m ingest.chamber_votes --through 2026-10-09` reconstrói sem rede.
 Revisões, fontes e snapshots ficam fora do Git; falhas preservam a saída anterior.

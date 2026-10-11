@@ -268,3 +268,32 @@ test('a rejected alternative version links to the approval that followed', async
   assert.match(app.innerHTML, /data-vote="1-2"/);
   assert.match(app.innerHTML, /Sim 407 × Não 6/);
 });
+
+test('decisions on parts of the text list under the main vote and open as their own page', async () => {
+  const segment = { id: '1-5', date: '2026-10-08', kind: 'destaque', title: 'Destaque <do> art. 1º', summary: 'Destaque para retirar o art. 1º.',
+    decisionLabel: 'Artigo mantido', yesMeaning: 'Manter o art. 1º.', noMeaning: 'Retirar o art. 1º.', outcome: 'kept',
+    tally: { yes: 284, no: 86, abstention: 3, total: 373 }, sources: {} };
+  const main = { available: true, vote: item('1-1', 'Texto principal', { segments: [segment] }), participants: [], partyTotals: [], participantsAvailable: false };
+  const part = { available: true, vote: { ...segment, proposition: 'PL 123/2026', type: 'PL', themes: [], parent: { id: '1-1', title: 'Texto principal', outcome: 'approved' } },
+    participants: [], partyTotals: [], participantsAvailable: false };
+  const { context, app, click } = loadApp({ fetch: async url => url.startsWith('/api/c/votes?')
+    ? jsonResponse(listPayload({ items: [item('1-1', 'Texto principal', { segmentCount: 1 })] }))
+    : jsonResponse(url.endsWith('/1-5') ? part : main) });
+  vm.runInContext("navigateToView('votes')", context);
+  await flush();
+  assert.match(app.innerHTML, /\+ 1 decisão sobre um trecho, com voto de cada deputado/);
+  click({ vote: '1-1' });
+  await flush();
+  assert.match(app.innerHTML, /Decisões sobre trechos do projeto/);
+  assert.match(app.innerHTML, /Votação em separado de um trecho/);
+  assert.match(app.innerHTML, /Destaque &lt;do&gt; art\. 1º/);
+  assert.match(app.innerHTML, /Manter o art\. 1º\./);
+  assert.match(app.innerHTML, /Artigo mantido/);
+  assert.match(app.innerHTML, /data-vote="1-5"/);
+  click({ vote: '1-5' });
+  await flush();
+  assert.match(app.innerHTML, /Parte de uma votação maior/);
+  assert.match(app.innerHTML, /data-vote="1-1"/);
+  assert.doesNotMatch(app.innerHTML, /PEC precisa de 308/);
+  assert.doesNotMatch(app.innerHTML, /Decisões sobre trechos do projeto/);
+});

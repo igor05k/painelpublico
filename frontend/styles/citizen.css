@@ -1102,3 +1102,22 @@ body[data-view="home"] .citizen-alert { box-shadow: var(--shadow-raised); }
   .alerts-status { margin-left: 0; }
   .alerts-seg { border-radius: 22px; }
 }
+
+/* Placar: decisões sobre trechos (destaques e emendas) */
+.scoreboard-segment-count { margin: 0; font-size: 13px; font-weight: 600; color: var(--accent); }
+.scoreboard-segments > p { margin: 0; }
+.scoreboard-segment-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
+.scoreboard-segment { display: flex; flex-direction: column; gap: 10px; padding-top: var(--space-4); border-top: 1px solid var(--line); }
+.scoreboard-segment h3 { margin: 0; font-family: var(--f-display); font-weight: 600; font-size: 20px; line-height: 1.25; }
+.scoreboard-segment > p { margin: 0; line-height: 1.5; color: var(--ink-2); }
+.scoreboard-segment-kind { margin: 0; font-family: var(--f-data); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.scoreboard-segment-meaning { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); margin: 0; }
+.scoreboard-segment-meaning > div { padding: 10px 12px; border-radius: 12px; background: var(--chip); }
+.scoreboard-segment-meaning dt { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; }
+.scoreboard-segment-meaning dt i { width: 10px; height: 10px; border-radius: 3px; }
+.scoreboard-segment-meaning dd { margin: 4px 0 0; font-size: 14px; color: var(--ink-2); line-height: 1.4; }
+.scoreboard-segment-result { display: flex; flex-direction: column; gap: 6px; }
+.scoreboard-segment > .more { align-self: flex-start; }
+.scoreboard-outcome[data-outcome="kept"]::before { content: '✓'; color: var(--accent); }
+@media (max-width: 640px) { .scoreboard-segment-meaning { grid-template-columns: 1fr; } }
+@media (min-width: 900px) { .scoreboard-segment-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 32px; } }

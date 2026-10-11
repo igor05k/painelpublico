@@ -541,6 +541,44 @@ exclusões, 0 pendências, 6.533 registros da API; período de 1º/2/2023 a 9/10
 Lacunas: 19 sem texto, 83 sem abstenções, 1 sem tema. O índice anterior, só de
 2026, ficou em `data/reviews/scoreboard-audit-2025/chamber-votes.index-2026-only.json`.
 
+## Decisões sobre trechos (piloto de 10/10/2026)
+
+Pergunta: o que o deputado decidiu sobre partes do projeto, além do texto principal?
+Um deputado pode apoiar o projeto e votar contra um trecho; a votação do texto principal
+não mostra isso.
+
+Regra do piloto: os cinco projetos mais recentes do Placar com destaque ou emenda votados
+nominalmente, e **todas** as votações nominais de destaque ou emenda desses projetos, sem
+escolher pelo placar. Resultado: 8 decisões em PLP 114/2026, PEC 5/2023 (1º turno),
+PL 1.625/2026, PEC 383/2017 (2º turno) e PLP 77/2026.
+
+Cada revisão fica em `data/reviews/chamber-vote-segment-reviews-<through>.json` (fora do Git)
+e traz o trecho em disputa, o significado de Sim e Não, o resultado (`approved`, `rejected`,
+`kept` ou `removed`), o objeto exato do relatório nominal e evidência de método, objeto e
+texto. A coleta (`ingest/chamber_vote_segments.py`) só publica quando:
+
+- a votação principal da mesma proposição e sessão está publicada;
+- o registro da API existe no inventário, tem a mesma data e um resultado compatível
+  (`aprovacao` 1, 0 ou ausente para votação em separado de trecho);
+- o relatório nominal oficial tem a mesma proposição, o objeto revisado e o mesmo placar,
+  e a API registrou a decisão até cinco minutos depois do encerramento;
+- a lista individual soma o placar.
+
+As decisões ficam penduradas na votação principal (`segments`), com detalhe próprio na mesma
+geração. Não entram em `publishedCount`, na concordância entre deputados, na unidade nem nas
+comparações de partidos. O conteúdo editorial foi conferido no inteiro teor oficial de cada
+destaque (DTQ), emenda (EMP, ERD) e parecer às emendas.
+
+Achado: na sessão do PL 1.625/2026, o relatório nominal das 21:56 (ideVotacao 13736) registra
+182 × 182 para o mesmo destaque da emenda nº 2, que aparece nos Dados Abertos como
+2613731-65, descrito só como “Resultado”. A decisão publicada é a das 22:25 (196 × 200).
+
+Custo medido: localizar o relatório nominal certo (os destaques ficam logo depois da votação
+principal na numeração `ideVotacao`) e ler o inteiro teor de cada destaque ou emenda. Antes
+de ampliar para as cerca de 216 candidatas nos projetos do Placar, decidir se a frase de
+contexto da relatoria (por exemplo, emendas rejeitadas "por não integrarem o acordo") entra
+sempre ou só quando o parecer a traz.
+
 ## Próxima etapa
 
 Expansão separada para emendas do Senado, nos quatro anos; integrar à `main` e

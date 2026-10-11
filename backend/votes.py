@@ -21,7 +21,11 @@ _OUTCOMES = {'approved', 'rejected', 'not_approved'}
 _ITEM_FIELDS = ('id', 'date', 'proposition', 'type', 'title', 'summary', 'decisionLabel',
                 'yesMeaning', 'noMeaning', 'outcome', 'tally', 'themes', 'sources', 'reviewedAt')
 _COVERAGE_FIELDS = ('inventoryCount', 'candidateCount', 'reviewedCount', 'publishedCount', 'pendingCount')
-_OPTIONAL_COVERAGE_FIELDS = ('excludedCount', 'missingTextCount', 'missingAbstentionCount', 'missingThemeCount')
+_OPTIONAL_COVERAGE_FIELDS = ('excludedCount', 'missingTextCount', 'missingAbstentionCount', 'missingThemeCount',
+                             'segmentCount')
+# Decisões sobre trechos (destaques e emendas) penduradas na votação do texto principal.
+_SEGMENT_KINDS = {'destaque', 'emenda', 'emendas', 'emenda_redacao'}
+_SEGMENT_OUTCOMES = {'approved', 'rejected', 'kept', 'removed'}
 
 _cache_lock = threading.Lock()
 _snapshot_cache: dict[Path, tuple[tuple[int, int], object]] = {}
@@ -66,6 +70,41 @@ def _text(value, *, limit=5000, required=True):
 def _count(value, *, nullable=False):
     return ((nullable and value is None) or
             (isinstance(value, int) and not isinstance(value, bool) and value >= 0))
+
+
+def _tally(value):
+    if not isinstance(value, dict) or any(not _count(value.get(key), nullable=True)
+                                          for key in ('yes', 'no', 'abstention', 'total')):
+        return None
+    return {key: value[key] for key in ('yes', 'no', 'abstention', 'total')}
+
+
+def _https(value):
+    return _text(value, limit=2048) and value.startswith('https://')
+
+
+def _segment_item(value, parent_date):
+    """Validate one reviewed decision about part of the text, voted in the same session."""
+    if (not isinstance(value, dict) or not _VOTE_ID.fullmatch(str(value.get('id', '')))
+            or value.get('date') != parent_date or value.get('kind') not in _SEGMENT_KINDS
+            or value.get('outcome') not in _SEGMENT_OUTCOMES):
+        return None
+    for key, limit in (('title', 300), ('summary', 5000), ('decisionLabel', 300), ('yesMeaning', 500),
+                       ('noMeaning', 500), ('reviewedAt', 80)):
+        if not _text(value.get(key), limit=limit):
+            return None
+    tally, sources = _tally(value.get('tally')), value.get('sources')
+    if tally is None or not isinstance(sources, dict) or any(not _https(sources.get(key))
+                                                             for key in ('vote', 'rollCall', 'text', 'proposition')):
+        return None
+    notes = value.get('dataNotes')
+    if 'dataNotes' in value and (not isinstance(notes, list) or len(notes) > 4
+                                or any(not _text(note, limit=500) for note in notes)):
+        return None
+    return {**{key: value[key] for key in ('id', 'date', 'kind', 'title', 'summary', 'decisionLabel', 'yesMeaning',
+                                           'noMeaning', 'outcome', 'reviewedAt')},
+            'tally': tally, 'sources': {key: sources[key] for key in ('vote', 'rollCall', 'text', 'proposition')},
+            **({'dataNotes': notes} if 'dataNotes' in value else {})}
 
 
 def _summary_item(value):
@@ -142,6 +181,13 @@ def _summary_item(value):
     if 'dataNotes' in value and (not isinstance(notes, list) or len(notes) > 4
                                 or any(not _text(note, limit=500) for note in notes)):
         return None
+    segments = value.get('segments')
+    if 'segments' in value:
+        if not isinstance(segments, list) or not segments:
+            return None
+        segments = [_segment_item(segment, value['date']) for segment in segments]
+        if any(segment is None for segment in segments) or len({segment['id'] for segment in segments}) != len(segments):
+            return None
 
     return {
         'id': value['id'], 'date': value['date'], 'proposition': value['proposition'], 'type': value['type'],
@@ -150,6 +196,7 @@ def _summary_item(value):
         'tally': {key: tally[key] for key in ('yes', 'no', 'abstention', 'total')},
         'themes': safe_themes, 'sources': safe_sources, 'reviewedAt': value['reviewedAt'],
         **({'dataNotes': notes} if 'dataNotes' in value else {}),
+        **({'segments': segments} if 'segments' in value else {}),
         **({'related': {'id': related['id'], 'relation': related['relation'], 'outcome': related['outcome'],
                         'tally': {key: related['tally'][key] for key in ('yes', 'no', 'abstention', 'total')}}}
            if 'related' in value else {}),
@@ -199,10 +246,15 @@ def _index(path=None):
     seen_ids = set()
     for raw_item in items:
         item = _summary_item(raw_item)
-        if item is None or item['id'] in seen_ids:
+        if item is None:
             return None
-        seen_ids.add(item['id'])
+        ids = [item['id'], *(segment['id'] for segment in item.get('segments', []))]
+        if len(set(ids)) != len(ids) or any(identifier in seen_ids for identifier in ids):
+            return None
+        seen_ids.update(ids)
         safe_items.append(item)
+    if coverage.get('segmentCount', 0) != sum(len(item.get('segments', [])) for item in safe_items):
+        return None
     if coverage['publishedCount'] != len(safe_items):
         return None
     # Latest decisions first; IDs make same-day ordering stable.
@@ -258,7 +310,11 @@ def listing(params=None, path=None):
     total = len(filtered)
     page_count = (total + page_size - 1) // page_size
     offset = (page - 1) * page_size
-    return {'available': True, 'items': filtered[offset:offset + page_size], 'total': total,
+    # A lista mostra só quantas decisões sobre trechos cada votação tem; o conteúdo fica no detalhe.
+    page_items = [{**{key: value for key, value in item.items() if key != 'segments'},
+                   **({'segmentCount': len(item['segments'])} if item.get('segments') else {})}
+                  for item in filtered[offset:offset + page_size]]
+    return {'available': True, 'items': page_items, 'total': total,
             'page': page, 'pageSize': page_size, 'pageCount': page_count,
             'period': snapshot['period'], 'coverage': snapshot['coverage'],
             'filters': {'types': types, 'themes': sorted(themes_by_id.values(), key=lambda theme: (theme['label'], theme['id']))},
@@ -325,7 +381,14 @@ def detail(identifier, path=None):
         return None
     vote = next((item for item in snapshot['items'] if item['id'] == identifier), None)
     if vote is None:
-        return None
+        # Decisão sobre um trecho: mesma página, com a proposição e o link da votação principal.
+        parent = next((item for item in snapshot['items']
+                       if any(segment['id'] == identifier for segment in item.get('segments', []))), None)
+        if parent is None:
+            return None
+        segment = next(segment for segment in parent['segments'] if segment['id'] == identifier)
+        vote = {**segment, 'proposition': parent['proposition'], 'type': parent['type'], 'themes': parent['themes'],
+                'parent': {'id': parent['id'], 'title': parent['title'], 'outcome': parent['outcome']}}
 
     participants, party_totals, available = _vote_details(snapshot_path, snapshot, identifier)
     return {'available': True, 'vote': vote, 'participants': participants,

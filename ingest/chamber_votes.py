@@ -20,6 +20,7 @@ from urllib.parse import urlsplit
 
 from ingest.chamber_vote_inventory import API_BASE, ROOT, CollectionError, _load, _paged
 from ingest.chamber_vote_rules import _recorded_partial_tally, classify_vote
+from ingest.chamber_vote_segments import build_segments
 from ingest.chamber_vote_report import identify_participants, parse_roll_call
 from ingest.project_status import _atomic_bytes, _json_bytes, _valid_date, request_bytes, utc_now
 
@@ -137,7 +138,8 @@ def normalize_participants(rows, tally):
             [{'party': party, **counts} for party, counts in sorted(parties.items())])
 
 
-def build_catalogue(inventory, reviews, *, root=ROOT, collect=False, refresh=False, request=request_bytes):
+def build_catalogue(inventory, reviews, *, root=ROOT, collect=False, refresh=False, request=request_bytes,
+                    segment_reviews=None):
     if not isinstance(inventory, dict) or inventory.get('listComplete') is not True:
         raise CollectionError('O catálogo exige o inventário completo da API.')
     if not isinstance(reviews, list):
@@ -305,6 +307,9 @@ def build_catalogue(inventory, reviews, *, root=ROOT, collect=False, refresh=Fal
                                                       'identities': identity_sources}
                                                      if participants_origin == 'rollCall' else {})}}
     _link_followed_versions(items, followers, registered)
+    if segment_reviews is not None:
+        details.update(build_segments(items, entries, segment_reviews, cache=cache,
+                                      collect=collect, refresh=refresh, request=request))
     items.sort(key=lambda item: (item['date'], item['id']), reverse=True)
     published = len(items)
     excluded = len(excluded_ids)
@@ -317,7 +322,7 @@ def build_catalogue(inventory, reviews, *, root=ROOT, collect=False, refresh=Fal
                 'excludedCount': excluded, 'pendingCount': pending,
                 'missingTextCount': missing_text, 'missingAbstentionCount': missing_abstention,
                 'missingThemeCount': missing_theme,
-}
+                'segmentCount': sum(len(item.get('segments', [])) for item in items)}
     coverage['detail'] = _coverage_detail(coverage, str(start.year))
     details_version = hashlib.sha256(_json_bytes(details)).hexdigest()
     return {'schemaVersion': 1, 'generatedAt': utc_now(), 'period': period, 'detailsVersion': details_version,
@@ -368,11 +373,13 @@ def merge_catalogues(parts):
             if item['id'] in details:
                 raise CollectionError(f'{item["id"]}: decisão repetida em mais de um período.')
             details[item['id']] = part_details[item['id']]
+            for segment in item.get('segments', []):
+                details[segment['id']] = part_details[segment['id']]
             items.append(item)
     items.sort(key=lambda item: (item['date'], item['id']), reverse=True)
     counts = ('inventoryCount', 'candidateCount', 'reviewedCount', 'publishedCount', 'excludedCount',
-              'pendingCount', 'missingTextCount', 'missingAbstentionCount', 'missingThemeCount')
-    coverage = {key: sum(snapshot['coverage'][key] for snapshot, _ in parts) for key in counts}
+              'pendingCount', 'missingTextCount', 'missingAbstentionCount', 'missingThemeCount', 'segmentCount')
+    coverage = {key: sum(snapshot['coverage'].get(key, 0) for snapshot, _ in parts) for key in counts}
     period = {'start': parts[0][0]['period']['start'], 'end': parts[-1][0]['period']['end']}
     years = sorted({snapshot['period']['start'][:4] for snapshot, _ in parts})
     coverage['detail'] = _coverage_detail(coverage, years[0] if len(years) == 1 else f'{years[0]} a {years[-1]}')
@@ -422,8 +429,11 @@ def main(argv=None):
             reviews_path = args.reviews or args.root / 'data' / 'reviews' / f'chamber-vote-reviews-{through}.json'
             inventory = json.loads((args.root / 'data' / 'reviews' / f'chamber-vote-inventory-{through}.json').read_text())
             reviews = json.loads(reviews_path.read_text())
-            parts.append(build_catalogue(inventory, reviews, root=args.root,
-                                         collect=args.collect, refresh=args.refresh))
+            # Destaques e emendas revisados do mesmo período, quando houver.
+            segments_path = args.root / 'data' / 'reviews' / f'chamber-vote-segment-reviews-{through}.json'
+            segment_reviews = json.loads(segments_path.read_text()) if segments_path.exists() else None
+            parts.append(build_catalogue(inventory, reviews, root=args.root, collect=args.collect,
+                                         refresh=args.refresh, segment_reviews=segment_reviews))
         snapshot, details = parts[0] if len(parts) == 1 else merge_catalogues(parts)
         write_catalogue(snapshot, details, args.root / 'data' / 'snapshots')
     except (OSError, ValueError, KeyError, TypeError) as error:
