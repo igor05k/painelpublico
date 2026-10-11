@@ -24,7 +24,7 @@ _COVERAGE_FIELDS = ('inventoryCount', 'candidateCount', 'reviewedCount', 'publis
 _OPTIONAL_COVERAGE_FIELDS = ('excludedCount', 'missingTextCount', 'missingAbstentionCount', 'missingThemeCount',
                              'segmentCount')
 # Decisões sobre trechos (destaques e emendas) penduradas na votação do texto principal.
-_SEGMENT_KINDS = {'destaque', 'emenda', 'emendas', 'emenda_redacao'}
+_SEGMENT_KINDS = {'destaque', 'emenda', 'emendas', 'emenda_redacao', 'dispositivos'}
 _SEGMENT_OUTCOMES = {'approved', 'rejected', 'kept', 'removed'}
 
 _cache_lock = threading.Lock()

@@ -51,7 +51,7 @@ function scoreboardOutcome(outcome, related) {
   return ({ approved: 'Aprovado nesta votação', rejected: 'Rejeitado nesta votação', not_approved: 'Não aprovado nesta votação' })[outcome] || 'Resultado não informado';
 }
 /* Decisões sobre trechos: o tipo diz como o trecho foi votado; o resultado, o que aconteceu com ele. */
-const SCOREBOARD_SEGMENT_KINDS = { destaque: 'Votação em separado de um trecho', emenda: 'Emenda', emendas: 'Emendas votadas em bloco', emenda_redacao: 'Emenda de redação' };
+const SCOREBOARD_SEGMENT_KINDS = { destaque: 'Votação em separado de um trecho', emenda: 'Emenda', emendas: 'Emendas votadas em bloco', emenda_redacao: 'Emenda de redação', dispositivos: 'Dispositivos votados em bloco' };
 const SCOREBOARD_SEGMENT_OUTCOMES = { kept: 'Trecho mantido', removed: 'Trecho retirado', approved: 'Aprovada', rejected: 'Rejeitada' };
 function scoreboardSegments(segments) {
   const rows = Array.isArray(segments) ? segments.filter(segment => SCOREBOARD_VOTE_ID.test(scoreboardText(segment?.id))) : [];

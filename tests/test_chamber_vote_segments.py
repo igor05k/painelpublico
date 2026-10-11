@@ -140,6 +140,14 @@ class ChamberVoteSegmentsTests(unittest.TestCase):
             chamber_votes.build_catalogue(data, [review()], root=Path(tempfile.mkdtemp(dir=self.root)), collect=True,
                                           request=api, segment_reviews=[segment_review()])
 
+    def test_same_day_order_follows_roll_call_numbers(self):
+        # A votação principal do fixture não tem ideVotacao; com um relatório anterior ao do trecho, passa.
+        parent_review = {**review(), "sources": {**review()["sources"], "rollCall": SEGMENT_ROLL_CALL.replace("=99", "=98")}}
+        from ingest.chamber_vote_segments import _roll_call_number
+        self.assertEqual(_roll_call_number(SEGMENT_ROLL_CALL), 99)
+        self.assertIsNone(_roll_call_number("https://www.camara.leg.br/votacoes/123-1/relatorio"))
+        self.assertEqual(_roll_call_number(parent_review["sources"]["rollCall"]), 98)
+
     def test_unconfirmed_segment_needs_a_reason_and_is_not_published(self):
         snapshot, _ = self.build([segment_review(status="pending", reason="texto ainda não conferido")])
         self.assertNotIn("segments", snapshot["items"][0])

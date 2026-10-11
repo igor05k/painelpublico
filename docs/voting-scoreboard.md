@@ -579,6 +579,17 @@ e votar Não o rejeita; vários destaques foram pedidos "para fins de aprovaçã
 da API omite os votos Não (Emenda Aglutinativa nº 1 ao PLP 108/2024, 403 × 0), a contagem vem do
 relatório nominal, com nota de dados.
 
+Ampliação (11/10/2026): todas as 189 candidatas restantes nos projetos do Placar. A parte mecânica
+(votação principal, relatório nominal pela ordem `ideVotacao` e pelo placar, documento oficial do
+destaque ou da emenda e extração do texto) foi automatizada; a redação foi feita por agentes em
+paralelo com um guia único e conferida pela coleta, decisão a decisão. Resultado: 217 revisões, 193
+publicadas em 81 projetos e 24 pendentes com motivo (17 sem relatório nominal localizado, 2 com
+proposição apensada de outra numeração, 2 com a votação principal em outro ano do catálogo, 1 com
+total da API que inclui o voto do presidente, 1 com outra votação principal no meio e 1 sem documento
+que explique o efeito do trecho). No mesmo dia (dois turnos de PEC), a ordem dos relatórios nominais
+decide a qual votação principal o trecho pertence. Novo tipo: `dispositivos`, para dispositivos do
+Senado votados em bloco.
+
 Achado: na sessão do PL 1.625/2026, o relatório nominal das 21:56 (ideVotacao 13736) registra
 182 × 182 para o mesmo destaque da emenda nº 2, que aparece nos Dados Abertos como
 2613731-65, descrito só como “Resultado”. A decisão publicada é a das 22:25 (196 × 200).

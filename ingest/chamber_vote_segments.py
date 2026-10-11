@@ -5,11 +5,13 @@ registro da API, o relatório nominal oficial e os votos individuais. Falha fech
 """
 from __future__ import annotations
 
+import re
+
 from ingest.chamber_vote_inventory import API_BASE, CollectionError, _load, _paged
 from ingest.chamber_vote_report import identify_participants, parse_roll_call
 from ingest.chamber_vote_rules import _recorded_partial_tally
 
-SEGMENT_KINDS = {'destaque', 'emenda', 'emendas', 'emenda_redacao'}
+SEGMENT_KINDS = {'destaque', 'emenda', 'emendas', 'emenda_redacao', 'dispositivos'}
 # "kept"/"removed": votação em separado de um trecho; "approved"/"rejected": emendas.
 SEGMENT_OUTCOMES = {'approved', 'rejected', 'kept', 'removed'}
 SEGMENT_FIELDS = ('title', 'summary', 'decisionLabel', 'yesMeaning', 'noMeaning')
@@ -45,6 +47,15 @@ def build_segments(items, inventory_entries, reviews, *, cache, collect, refresh
                       and parent['date'] < item['date'] <= (entry or {}).get('date', '')]
         if entry is None or entry['date'] < parent['date'] or later_main:
             raise CollectionError(f'{identifier}: trecho fora do inventário ou de outra votação principal.')
+        # No mesmo dia (dois turnos de PEC, por exemplo), a ordem dos relatórios nominais decide.
+        order = _roll_call_number((review.get('sources') or {}).get('rollCall') if isinstance(review.get('sources'), dict) else None)
+        same_day = [_roll_call_number(item['sources'].get('rollCall')) for item in items
+                    if item['id'].split('-')[0] == parent['id'].split('-')[0] and item['date'] == entry['date']]
+        parent_order = _roll_call_number(parent['sources'].get('rollCall'))
+        if order is not None and (
+                (parent_order is not None and parent_order > order)
+                or any(other is not None and parent_order is not None and parent_order < other < order for other in same_day)):
+            raise CollectionError(f'{identifier}: outra votação principal da sessão fica entre o texto ligado e o trecho.')
         evidence, sources = review.get('evidence'), review.get('sources')
         if (review.get('kind') not in SEGMENT_KINDS or review.get('outcome') not in SEGMENT_OUTCOMES
                 or not valid_date(review.get('reviewedAt'))
@@ -120,3 +131,9 @@ def build_segments(items, inventory_entries, reviews, *, cache, collect, refresh
             item['segments'].sort(key=lambda segment: (segment.pop('registeredAt'), segment['id']))
     return details
 
+
+
+def _roll_call_number(url):
+    """Número sequencial do relatório nominal (ideVotacao), quando o link o traz."""
+    match = re.search(r'[?&]ideVotacao=(\d+)', url or '')
+    return int(match.group(1)) if match else None
