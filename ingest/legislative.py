@@ -791,7 +791,7 @@ def import_year(year: int, output: Path) -> dict[str, Any]:
             "idênticas sem identificador exclusivo."
         )
         if partial:
-            detail += " O ano de 2026 ainda está em andamento; estes dados refletem o conteúdo disponível no arquivo consultado."
+            detail += f" O ano de {year} ainda está em andamento; estes dados refletem o conteúdo disponível no arquivo consultado."
         if chamber_stats["fingerprintRows"]:
             detail += " Correções nesses lançamentos podem aparecer como novos registros, pois não há ID nativo exclusivo."
         if chamber_stats["documentIdsRedacted"]:
@@ -870,7 +870,7 @@ def import_year(year: int, output: Path) -> dict[str, Any]:
             "idênticas sem identificador exclusivo."
         )
         if partial:
-            detail += " O ano de 2026 ainda está em andamento; os dados refletem os registros disponibilizados pelo endpoint até a consulta."
+            detail += f" O ano de {year} ainda está em andamento; os dados refletem os registros disponibilizados pelo endpoint até a consulta."
         if senate_stats["fingerprintRows"]:
             detail += " Correções nesses lançamentos podem aparecer como novos registros, pois não há ID nativo exclusivo."
         if senate_stats["documentIdsRedacted"]:

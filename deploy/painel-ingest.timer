@@ -1,0 +1,13 @@
+# Dispara a atualização diária às 5h40 (horário de Brasília), com até 15 min de atraso aleatório.
+# Persistent=true: se o servidor estava desligado no horário, roda ao ligar.
+[Unit]
+Description=Painel Público: timer da atualização diária
+
+[Timer]
+OnCalendar=*-*-* 05:40:00 America/Sao_Paulo
+RandomizedDelaySec=15min
+Persistent=true
+Unit=painel-ingest.service
+
+[Install]
+WantedBy=timers.target

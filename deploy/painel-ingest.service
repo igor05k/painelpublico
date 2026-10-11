@@ -1,0 +1,28 @@
+# Atualização diária dos dados (cota da Câmara e do Senado). Disparado por painel-ingest.timer.
+# Instalado por make deploy / GitHub Actions em /etc/systemd/system/. Variáveis de e-mail em /etc/painel/pipeline.env.
+[Unit]
+Description=Painel Público: atualização diária dos dados
+After=network-online.target
+Wants=network-online.target
+# Aviso de último recurso se o processo morrer antes de gravar status (ex.: timeout, falta de memória).
+OnFailure=painel-ingest-failure.service
+
+[Service]
+Type=oneshot
+User=painel
+WorkingDirectory=/opt/painel/app
+Environment=PAINEL_DB=/opt/painel/data/na-lupa.sqlite3
+Environment=PAINEL_SNAPSHOTS=/opt/painel/data/snapshots
+EnvironmentFile=-/etc/painel/pipeline.env
+ExecStart=/usr/bin/python3 -m ingest.pipeline daily
+TimeoutStartSec=2h
+# Não disputa CPU e disco com o site.
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadOnlyPaths=/opt/painel/app
+ReadWritePaths=/opt/painel/data

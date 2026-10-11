@@ -37,9 +37,54 @@ visitante → Cloudflare (HTTPS, cache, proteção) → túnel → 127.0.0.1:800
 |---|---|
 | Código ou telas | `make deploy` |
 | Banco ou snapshots (nova coleta/importação) | `make db-check` e depois `make deploy-data` (alias `deploy-db`). Os snapshots listados em `deploy/snapshots-local-only.txt` (insumos do custo do mandato) ficam só no computador local |
+| Cota do ano corrente | Nada: `painel-ingest.timer` atualiza no servidor todo dia (abaixo). `make deploy-data` continua válido para publicar uma base local, e substitui a do servidor |
 | Ver se está no ar | `make deploy-status` |
 
 Logs: `ssh SERVIDOR journalctl -u painel -f`.
+
+## Atualização automática dos dados
+
+A cota da Câmara e do Senado do ano corrente é atualizada todo dia no próprio servidor por
+`painel-ingest.timer` (5h40 de Brasília, com até 15 min de atraso aleatório). O timer chama
+`python3 -m ingest.pipeline daily`, que executa, nesta ordem, e grava cada etapa em
+`/opt/painel/data/status/daily.json` (histórico em `daily-history.jsonl`):
+
+| Etapa | O que faz | Se falhar |
+|---|---|---|
+| `collect` | `ingest/legislative.py --year <ano corrente>` grava `data/imports/legislative.json` | Fonte indisponível vira execução **parcial** e preserva a fotografia anterior daquela fonte; coletor que morre interrompe |
+| `validate` | Confere fontes, ano das notas (nunca importa outro ano no caminho padrão) e o que será substituído | Interrompe antes de tocar o banco |
+| `backup` | Cópia consistente em `data/backups/na-lupa-daily-<data>.sqlite3`; mantém as 7 mais recentes | Interrompe |
+| `stage` | Copia o banco publicado para `data/pipeline/`; o banco em uso nunca recebe escrita | Interrompe |
+| `import` | Importação transacional na cópia (`backend.public_store`) | Transação desfeita; interrompe |
+| `verify` | `quick_check`, chaves estrangeiras, versão do esquema e **guarda de regressão**: lista oficial caindo mais de 5% ou notas caindo mais de 10% não são publicadas | Interrompe; a cópia é descartada |
+| `publish` | Troca atômica do arquivo do banco (`os.replace`); o cache do site invalida sozinho pela data do arquivo | Recusa se houver `-journal`/`-wal` pendente ao lado do banco |
+| `notify` | E-mail em falha e parcial (sucesso só com `PAINEL_MAIL_ON_SUCCESS=1`) e ping opcional no monitor | Falha de envio fica registrada no status |
+
+Só uma execução por vez (lock em `data/status/pipeline.lock`). Os limites da guarda de regressão
+são argumentos do comando (`--max-roster-drop`, `--max-expense-drop`); quando uma queda for legítima,
+rode uma vez à mão com limites maiores, confira e deixe o timer seguir. O banco, os backups e os
+caches ficam em `/opt/painel/data`; `/opt/painel/app/data` é um link para essa pasta, criado pelo
+deploy, porque os coletores gravam em `<app>/data`.
+
+Ativar (uma vez), depois do `make deploy`, que instala as unidades:
+
+```sh
+sudo install -m 0600 /opt/painel/app/deploy/pipeline.env.example /etc/painel/pipeline.env
+sudo nano /etc/painel/pipeline.env                      # destinatário e SMTP (Gmail: senha de app)
+sudo systemctl start painel-ingest.service && sudo journalctl -u painel-ingest -n 50   # primeira execução, assistida
+sudo systemctl enable --now painel-ingest.timer
+```
+
+Acompanhar: `systemctl list-timers painel-ingest.timer`, `journalctl -u painel-ingest -n 100`
+e `make deploy-status`, que mostra o último resultado. Teste do e-mail no servidor:
+`cd /opt/painel/app && sudo -u painel env $(sudo cat /etc/painel/pipeline.env | xargs) python3 -m ingest.pipeline test-mail`.
+Localmente, `make update-daily DRY_RUN=1` faz tudo, menos trocar o banco.
+
+Se o processo morrer sem gravar status (timeout de 2 h, falta de memória), `painel-ingest-failure.service`
+envia o aviso de último recurso. O e-mail não detecta o timer que deixou de disparar; para isso,
+defina `PAINEL_HEALTHCHECK_URL` com um monitor externo (healthchecks.io ou similar), que avisa
+quando o ping diário não chega. Os demais coletores (perfis, projetos, Senado, custo do mandato,
+Minha cidade) continuam manuais; a ordem de automação está em [Próximas etapas](roadmap.md).
 
 ## Rodar do próprio Mac (temporário)
 
@@ -52,7 +97,7 @@ Para mostrar o site sem servidor: rode `make prod` e, em outro terminal, `cloudf
 
 ## Publicação automática pelo GitHub
 
-O workflow `.github/workflows/deploy.yml` roda `make ci` (sintaxe e testes, sem dados privados ou downloads) em todo push e pull request. Em push na `main`, se passar, ele envia o código e o servidor monta a página com os snapshots complementares que já estiverem lá (`/opt/painel/data/snapshots`). O build não exige `editorial.json` nem qualquer snapshot; a lista e os totais de parlamentares vêm do SQLite em execução. Banco e snapshots nunca passam pelo GitHub: vão pelo `make deploy-data`, do seu computador. Rode esse comando para publicar uma nova base ou atualizar complementos locais.
+O workflow `.github/workflows/deploy.yml` roda `make ci` (sintaxe e testes, sem dados privados ou downloads) em todo push e pull request. Em push na `main`, se passar, ele envia o código, instala as unidades do systemd (site e atualização automática) e o servidor monta a página com os snapshots complementares que já estiverem lá (`/opt/painel/data/snapshots`). O build não exige `editorial.json` nem qualquer snapshot; a lista e os totais de parlamentares vêm do SQLite em execução. Banco e snapshots nunca passam pelo GitHub: vão pelo `make deploy-data`, do seu computador. Rode esse comando para publicar uma nova base ou atualizar complementos locais.
 
 Configuração (uma vez):
 

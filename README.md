@@ -18,7 +18,7 @@ Abra [localhost:8000](http://127.0.0.1:8000/). `make dev` gera `dist/index.html`
 
 A base já existente em `data/na-lupa.sqlite3` é preservada. Este repositório publica somente código, testes e documentação: banco, snapshots complementares, downloads e credenciais são locais.
 
-**Em um clone novo**, `make check`, `make build` e `make dev` não dependem de `editorial.json` nem de snapshots privados. `make db-init` prepara um banco vazio; para consultar a base parlamentar completa, obtenha os arquivos normalizados e importe-os conforme [Dados e SQLite](docs/data.md). O build não baixa dados. Presença, votos e perfis são complementos opcionais, coletados manualmente.
+**Em um clone novo**, `make check`, `make build` e `make dev` não dependem de `editorial.json` nem de snapshots privados. `make db-init` prepara um banco vazio; para consultar a base parlamentar completa, obtenha os arquivos normalizados e importe-os conforme [Dados e SQLite](docs/data.md). O build não baixa dados. Presença, votos e perfis são complementos opcionais, coletados manualmente; no servidor, a cota do ano corrente é atualizada todo dia por um timer do systemd.
 
 Sem Make:
 
@@ -49,6 +49,7 @@ python3 -m backend.server --port 8000
 | `make collect-amendments YEAR=2026` | Coletar emendas por município e ano da proposta; valores empenhados e pagos separados |
 | `make collect-cities` | Coletar a base nacional de Minha cidade (IBGE e TSE); reconstrução offline em [Dados e SQLite](docs/data.md) |
 | `make collect-elections` | Ligar a lista atual às candidaturas de 2026 no TSE; depois rode `make build` |
+| `make update-daily` | Atualização diária da cota: coleta, importa em cópia, verifica e publica; no servidor roda por timer ([Publicação](docs/deploy.md)) |
 | `make prod` | Rodar como em produção (cache, só localhost) |
 | `make deploy` / `make deploy-db` | Publicar código / banco no servidor ([Publicação](docs/deploy.md)) |
 

@@ -2,7 +2,8 @@
 .env
 .DS_Store
 __pycache__/
-data/
+# Só o data/ da raiz: no servidor é um link para /opt/painel/data e precisa sobreviver ao --delete.
+/data
 archive/
 artifacts/
 _backup-antes-do-claude/

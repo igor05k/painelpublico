@@ -7,6 +7,10 @@ apt-get update -y
 apt-get install -y python3 rsync sqlite3 curl ufw
 id painel >/dev/null 2>&1 || useradd --system --home /opt/painel --shell /usr/sbin/nologin painel
 install -d -o painel -g painel /opt/painel /opt/painel/app /opt/painel/data
+# Os coletores gravam em <app>/data; no servidor isso aponta para a pasta de dados fora do código.
+ln -sfn /opt/painel/data /opt/painel/app/data
+# Variáveis da atualização automática (e-mail); modelo em deploy/pipeline.env.example.
+install -d -m 0750 /etc/painel
 
 # cloudflared (repositório oficial da Cloudflare)
 if ! command -v cloudflared >/dev/null; then
@@ -20,3 +24,4 @@ fi
 ufw allow OpenSSH
 ufw --force enable
 echo "Pronto. Próximo passo no seu computador: make deploy-db SERVER=root@ESTE_SERVIDOR e make deploy SERVER=root@ESTE_SERVIDOR"
+echo "Depois, para a atualização automática: copie deploy/pipeline.env.example para /etc/painel/pipeline.env e rode systemctl enable --now painel-ingest.timer"

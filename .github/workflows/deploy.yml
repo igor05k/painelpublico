@@ -49,7 +49,7 @@ jobs:
       - name: Upload code and build on server
         run: |
           rsync -az --delete --rsync-path="sudo rsync" --exclude-from=deploy/rsync-exclude.txt ./ painel:/opt/painel/app/
-          ssh painel "sudo sh -c 'cd /opt/painel/app && PAINEL_SNAPSHOTS=/opt/painel/data/snapshots python3 scripts/build.py && chown -R painel:painel /opt/painel/app && install -m 0644 deploy/dashboard.service /etc/systemd/system/painel.service && systemctl daemon-reload && systemctl restart painel'"
+          ssh painel "sudo sh -c 'cd /opt/painel/app && ln -sfn /opt/painel/data /opt/painel/app/data && PAINEL_SNAPSHOTS=/opt/painel/data/snapshots python3 scripts/build.py && chown -R painel:painel /opt/painel/app && install -m 0644 deploy/dashboard.service /etc/systemd/system/painel.service && install -m 0644 deploy/painel-ingest.service deploy/painel-ingest.timer deploy/painel-ingest-failure.service /etc/systemd/system/ && systemctl daemon-reload && systemctl restart painel'"
       - name: Check site availability
         run: |
           for i in 1 2 3 4 5; do ssh painel 'curl -fsS http://127.0.0.1:8000/healthz' && exit 0; sleep 3; done
