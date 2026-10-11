@@ -590,9 +590,24 @@ que explique o efeito do trecho). No mesmo dia (dois turnos de PEC), a ordem dos
 decide a qual votação principal o trecho pertence. Novo tipo: `dispositivos`, para dispositivos do
 Senado votados em bloco.
 
-Contagem do catálogo após a ampliação: 193 decisões sobre trechos ligadas a 85 votações do texto
-principal, de 74 proposições. Elas aparecem sob 75 IDs de origem porque a PEC 45/2019 tem dois IDs nos
-Dados Abertos (259094 e 2196833).
+Contagem do catálogo após tratar as pendências (11/10/2026): 214 decisões sobre trechos ligadas a 89
+votações do texto principal, de 78 proposições. Elas aparecem sob 79 IDs de origem porque a PEC 45/2019 tem
+dois IDs nos Dados Abertos (259094 e 2196833). Restam 3 pendentes: a Emenda Aglutinativa nº 1 da PEC 45/2019,
+que é o texto completo do primeiro turno (decisão sobre o texto principal, não sobre um trecho), e dois
+destaques que pertencem a votações principais fora do catálogo (PL 3.780/2023 em 2026 e PL 4.035/2023 em 2025).
+
+Regras de ligação acrescentadas ao tratar as pendências:
+
+- O relatório nominal é localizado pela data, varrendo todos os relatórios do dia e casando placar e
+  proposição; não depende do relatório da votação principal (destaques do 1º turno de uma PEC ficam antes
+  do 2º turno, no mesmo dia).
+- Projeto apensado: o relatório pode usar a numeração da proposição dos Dados Abertos (a afetada pelo
+  próprio registro, com o mesmo ID); a decisão leva nota de dados.
+- Total da API com o registro de quem presidiu (art. 17): vale o total do relatório, com nota.
+- Emenda votada na mesma sessão antes do texto principal (por exemplo, a emenda saneadora da CFT) se liga
+  à primeira votação principal da sessão, com nota.
+- A ligação pode cruzar anos do catálogo (emendas do Senado votadas no ano seguinte), desde que não haja
+  outra votação principal no meio; cada decisão usa o cache do inventário do seu ano.
 
 Regras de redação que valem para todas as revisões:
 

@@ -168,6 +168,50 @@ class ChamberVoteSegmentsTests(unittest.TestCase):
         self.assertIsNone(_roll_call_number("https://www.camara.leg.br/votacoes/123-1/relatorio"))
         self.assertEqual(_roll_call_number(parent_review["sources"]["rollCall"]), 98)
 
+    def direct(self, parent, api, review_changes=None, cache=None):
+        """Chama build_segments direto, com a votação principal montada no teste."""
+        from ingest.chamber_vote_segments import build_segments
+        items = [parent]
+        entries = {SEGMENT_ID: {"id": SEGMENT_ID, "date": THROUGH, "candidate": False}}
+        root = Path(tempfile.mkdtemp(dir=self.root))
+        build_segments(items, entries, [segment_review(**(review_changes or {}))], cache=cache or root,
+                       collect=True, refresh=False, request=api)
+        return items[0]["segments"][0]
+
+    @staticmethod
+    def parent(number=98, proposition="PL 1/2026", date_value=THROUGH):
+        return {"id": VOTE_ID, "date": date_value, "proposition": proposition,
+                "sources": {"rollCall": f"https://www.camara.leg.br/internet/votacao/mostraVotacao.asp?ideVotacao={number}"}}
+
+    def test_amendment_voted_before_the_main_text_in_the_same_session_gets_a_note(self):
+        segment = self.direct(self.parent(number=100), SegmentAPI())
+        self.assertIn("antes da votação do texto principal", segment["dataNotes"][-1])
+        with self.assertRaisesRegex(CollectionError, "outra votação principal"):
+            self.direct(self.parent(number=100, date_value="2026-10-08"), SegmentAPI())
+
+    def test_report_may_use_the_api_numbering_of_an_attached_bill(self):
+        api = SegmentAPI()
+        api.segment["proposicoesAfetadas"] = [{"id": 123, "siglaTipo": "PL", "numero": 1, "ano": 2026}]
+        segment = self.direct(self.parent(proposition="PL 9/2025"), api)
+        self.assertIn("numeração dos Dados Abertos (PL 1/2026)", segment["dataNotes"][-1])
+        with self.assertRaisesRegex(CollectionError, "relatório não corresponde"):
+            self.direct(self.parent(proposition="PL 9/2025"), SegmentAPI())
+
+    def test_api_total_with_the_presiding_member_uses_the_report_total(self):
+        report = segment_report().replace(b"<td>Deputado 3</td><td>SP</td><td>N\xc3\xa3o</td>",
+                                          b"<td>Deputado 3</td><td>SP</td><td>N\xc3\xa3o</td></tr><tr><td>Deputado 4</td><td>SP</td><td>Artigo 17</td>")
+        report = report.replace(b"Total ABC: 3", b"Total ABC: 4")
+        api = SegmentAPI(report=report, description="Rejeitada a Emenda de Plenário nº 1. Sim: 1; Não: 2; Total: 4.")
+        segment = self.direct(self.parent(), api)
+        self.assertEqual(segment["tally"]["total"], 3)
+        self.assertIn("quem presidiu", segment["dataNotes"][-1])
+
+    def test_cache_can_follow_the_inventory_year_of_each_decision(self):
+        root = Path(tempfile.mkdtemp(dir=self.root))
+        segment = self.direct(self.parent(date_value="2025-12-01"), SegmentAPI(), cache=lambda identifier: root / identifier)
+        self.assertEqual(segment["id"], SEGMENT_ID)
+        self.assertTrue((root / SEGMENT_ID / "reports" / f"{SEGMENT_ID}.html").exists())
+
     def test_unconfirmed_segment_needs_a_reason_and_is_not_published(self):
         snapshot, _ = self.build([segment_review(status="pending", reason="texto ainda não conferido")])
         self.assertNotIn("segments", snapshot["items"][0])

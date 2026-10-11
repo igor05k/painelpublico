@@ -53,15 +53,15 @@ function scoreboardOutcome(outcome, related) {
 /* Decisões sobre trechos: o tipo diz como o trecho foi votado; o resultado, o que aconteceu com ele. */
 const SCOREBOARD_SEGMENT_KINDS = { destaque: 'Votação em separado de um trecho', emenda: 'Emenda', emendas: 'Emendas votadas em bloco', emenda_redacao: 'Emenda de redação', dispositivos: 'Dispositivos votados em bloco' };
 const SCOREBOARD_SEGMENT_OUTCOMES = { kept: 'Trecho mantido', removed: 'Trecho retirado', approved: 'Aprovada', rejected: 'Rejeitada' };
-function scoreboardSegments(segments) {
+function scoreboardSegments(segments, mainDate = '') {
   const rows = Array.isArray(segments) ? segments.filter(segment => SCOREBOARD_VOTE_ID.test(scoreboardText(segment?.id))) : [];
   if (!rows.length) return '';
   return `<section class="card wide scoreboard-segments"><span class="k">Decisões sobre trechos do projeto</span>
-    <p class="muted">Depois do texto principal, a Câmara votou separadamente ${rows.length === 1 ? 'esta parte' : `estas ${rows.length} partes`} do texto, com o voto de cada deputado. Um deputado pode apoiar o projeto e votar contra um trecho.</p>
+    <p class="muted">Além do texto principal, a Câmara votou separadamente ${rows.length === 1 ? 'esta parte' : `estas ${rows.length} partes`} do texto, com o voto de cada deputado. Um deputado pode apoiar o projeto e votar contra um trecho.</p>
     <ol class="scoreboard-segment-list">${rows.map(segment => {
       const tally = segment.tally || {};
       return `<li class="scoreboard-segment">
-        <p class="scoreboard-segment-kind">${scoreboardEscape(SCOREBOARD_SEGMENT_KINDS[segment.kind] || 'Decisão sobre um trecho')} · ${scoreboardEscape(scoreboardDate(segment.date))}</p>
+        <p class="scoreboard-segment-kind">${scoreboardEscape(SCOREBOARD_SEGMENT_KINDS[segment.kind] || 'Decisão sobre um trecho')} · ${scoreboardEscape(String(segment.date || '').slice(0, 4) !== String(mainDate).slice(0, 4) ? scoreboardPeriodDate(segment.date) : scoreboardDate(segment.date))}</p>
         <h3>${scoreboardEscape(segment.title || 'Título não informado')}</h3>
         ${segment.summary ? `<p>${scoreboardEscape(segment.summary)}</p>` : ''}
         <dl class="scoreboard-segment-meaning"><div><dt><i class="vote-yes"></i>Sim</dt><dd>${scoreboardEscape(segment.yesMeaning || 'Não informado')}</dd></div><div><dt><i class="vote-no"></i>Não</dt><dd>${scoreboardEscape(segment.noMeaning || 'Não informado')}</dd></div></dl>
@@ -421,7 +421,7 @@ function scoreboardDetailView() {
       <p class="muted">${scoreboardEscape(outcome)}. O resultado se refere a esta decisão registrada. O total soma Sim, Não e Abstenção.</p></section>
     ${hasParticipants ? scoreboardParticipants(payload.participants) : '<section class="card scoreboard-voters"><span class="k">Votos individuais</span><p class="muted">A lista individual não está disponível para esta votação.</p></section>'}
     ${scoreboardPartyTotals(payload.partyTotals)}
-    ${scoreboardSegments(vote.segments)}
+    ${scoreboardSegments(vote.segments, vote.date)}
     ${scoreboardDetailSources(vote.sources, vote.dataNotes)}
     <span class="src">Fonte: Câmara dos Deputados · revisão em ${scoreboardEscape(scoreboardPeriodDate(vote.reviewedAt))}. O resultado descreve esta votação, sem indicar a situação atual da proposta.</span>`;
 }

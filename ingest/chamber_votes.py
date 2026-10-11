@@ -424,17 +424,28 @@ def main(argv=None):
     if args.reviews and len(throughs) > 1:
         parser.error('--reviews só pode ser usado com um único --through.')
     try:
-        parts = []
+        parts, entries, caches, segment_reviews = [], {}, {}, []
         for through in throughs:
             reviews_path = args.reviews or args.root / 'data' / 'reviews' / f'chamber-vote-reviews-{through}.json'
             inventory = json.loads((args.root / 'data' / 'reviews' / f'chamber-vote-inventory-{through}.json').read_text())
             reviews = json.loads(reviews_path.read_text())
-            # Destaques e emendas revisados do mesmo período, quando houver.
+            parts.append(build_catalogue(inventory, reviews, root=args.root, collect=args.collect, refresh=args.refresh))
+            # Destaques e emendas revisados do período; ligados depois de juntar os anos, porque podem
+            # pertencer a uma votação principal de um ano anterior.
             segments_path = args.root / 'data' / 'reviews' / f'chamber-vote-segment-reviews-{through}.json'
-            segment_reviews = json.loads(segments_path.read_text()) if segments_path.exists() else None
-            parts.append(build_catalogue(inventory, reviews, root=args.root, collect=args.collect,
-                                         refresh=args.refresh, segment_reviews=segment_reviews))
+            if segments_path.exists():
+                segment_reviews.extend(json.loads(segments_path.read_text()))
+            cache = (args.root / 'data' / 'raw' / 'chamber-vote-inventory'
+                     / f"{inventory['period']['start']}_{inventory['period']['end']}")
+            for entry in inventory['entries']:
+                entries[entry['id']] = entry
+                caches[entry['id']] = cache
         snapshot, details = parts[0] if len(parts) == 1 else merge_catalogues(parts)
+        if segment_reviews:
+            details.update(build_segments(snapshot['items'], entries, segment_reviews, cache=caches.__getitem__,
+                                          collect=args.collect, refresh=args.refresh, request=request_bytes))
+            snapshot['coverage']['segmentCount'] = sum(len(item.get('segments', [])) for item in snapshot['items'])
+            snapshot['detailsVersion'] = hashlib.sha256(_json_bytes(details)).hexdigest()
         write_catalogue(snapshot, details, args.root / 'data' / 'snapshots')
     except (OSError, ValueError, KeyError, TypeError) as error:
         parser.exit(1, f'Catálogo não gravado; saída anterior preservada: {error}\n')

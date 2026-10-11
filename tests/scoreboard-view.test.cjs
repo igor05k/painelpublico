@@ -285,6 +285,7 @@ test('decisions on parts of the text list under the main vote and open as their 
   click({ vote: '1-1' });
   await flush();
   assert.match(app.innerHTML, /Decisões sobre trechos do projeto/);
+  assert.match(app.innerHTML, /Além do texto principal/);
   assert.match(app.innerHTML, /Votação em separado de um trecho/);
   assert.match(app.innerHTML, /Destaque &lt;do&gt; art\. 1º/);
   assert.match(app.innerHTML, /Manter o art\. 1º\./);
