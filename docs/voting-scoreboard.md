@@ -590,11 +590,14 @@ que explique o efeito do trecho). No mesmo dia (dois turnos de PEC), a ordem dos
 decide a qual votação principal o trecho pertence. Novo tipo: `dispositivos`, para dispositivos do
 Senado votados em bloco.
 
-Contagem do catálogo após tratar as pendências (11/10/2026): 214 decisões sobre trechos ligadas a 89
+Contagem do catálogo após tratar as pendências (11/10/2026): 212 decisões sobre trechos ligadas a 89
 votações do texto principal, de 78 proposições. Elas aparecem sob 79 IDs de origem porque a PEC 45/2019 tem
-dois IDs nos Dados Abertos (259094 e 2196833). Restam 3 pendentes: a Emenda Aglutinativa nº 1 da PEC 45/2019,
+dois IDs nos Dados Abertos (259094 e 2196833). Restam 5 pendentes: a Emenda Aglutinativa nº 1 da PEC 45/2019,
 que é o texto completo do primeiro turno (decisão sobre o texto principal, não sobre um trecho), e dois
-destaques que pertencem a votações principais fora do catálogo (PL 3.780/2023 em 2026 e PL 4.035/2023 em 2025).
+destaques que pertencem a votações principais fora do catálogo (PL 3.780/2023 em 2026 e PL 4.035/2023 em 2025). Restam pendentes também
+dois destaques do texto do Senado na PEC 45/2019 (259094-146 e 259094-166): o texto do Senado não foi localizado
+nos documentos da Câmara, e a descrição do relator não substitui a redação literal. Signatário sem partido no
+requerimento recebe partido e UF do registro de votos da API para a mesma votação.
 
 Regras de ligação acrescentadas ao tratar as pendências:
 
