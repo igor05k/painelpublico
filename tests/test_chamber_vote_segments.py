@@ -110,6 +110,26 @@ class ChamberVoteSegmentsTests(unittest.TestCase):
         with self.assertRaisesRegex(CollectionError, "resultado da revisão diverge"):
             self.build([segment_review(outcome="approved")])
 
+    def test_explicit_api_description_decides_kept_or_removed(self):
+        removed = "Suprimido o texto. Sim: 1; Não: 2; Total: 3."
+        with self.assertRaisesRegex(CollectionError, "resultado da revisão diverge"):
+            self.build([segment_review(outcome="kept")], api=SegmentAPI(aprovacao=None, description=removed))
+        snapshot, _ = self.build([segment_review(outcome="removed")], api=SegmentAPI(aprovacao=None, description=removed))
+        self.assertEqual(snapshot["items"][0]["segments"][0]["outcome"], "removed")
+        # Sem verbo de resultado na descrição, nem "aprovacao" basta para escolher entre manter e retirar.
+        with self.assertRaisesRegex(CollectionError, "resultado da revisão diverge"):
+            self.build([segment_review(outcome="kept")],
+                       api=SegmentAPI(aprovacao=None, description="Resultado. Sim: 1; Não: 2; Total: 3."))
+
+    def test_api_outcome_requires_description_and_approval_to_agree(self):
+        from ingest.chamber_vote_segments import api_outcome
+        self.assertEqual(api_outcome("Mantido o texto. Sim: 1", None), "kept")
+        self.assertEqual(api_outcome("Rejeitadas as Emendas de Plenário.", 0), "rejected")
+        self.assertEqual(api_outcome("Aprovada a Emenda de Redação nº 4.", 1), "approved")
+        self.assertIsNone(api_outcome("Aprovada a Emenda nº 1.", 0))
+        self.assertIsNone(api_outcome("Suprimido o texto.", 1))
+        self.assertIsNone(api_outcome("Resultado. Sim: 1", None))
+
     def test_report_object_tally_and_timing_must_match(self):
         with self.assertRaisesRegex(CollectionError, "relatório não corresponde"):
             self.build([segment_review(reportObject="DTQ 2 - ABC - EMENDA DE PLENÁRIO Nº 2")])

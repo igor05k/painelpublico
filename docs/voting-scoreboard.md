@@ -583,12 +583,29 @@ Ampliação (11/10/2026): todas as 189 candidatas restantes nos projetos do Plac
 (votação principal, relatório nominal pela ordem `ideVotacao` e pelo placar, documento oficial do
 destaque ou da emenda e extração do texto) foi automatizada; a redação foi feita por agentes em
 paralelo com um guia único e conferida pela coleta, decisão a decisão. Resultado: 217 revisões, 193
-publicadas em 81 projetos e 24 pendentes com motivo (17 sem relatório nominal localizado, 2 com
+publicadas e 24 pendentes com motivo (17 sem relatório nominal localizado, 2 com
 proposição apensada de outra numeração, 2 com a votação principal em outro ano do catálogo, 1 com
 total da API que inclui o voto do presidente, 1 com outra votação principal no meio e 1 sem documento
 que explique o efeito do trecho). No mesmo dia (dois turnos de PEC), a ordem dos relatórios nominais
 decide a qual votação principal o trecho pertence. Novo tipo: `dispositivos`, para dispositivos do
 Senado votados em bloco.
+
+Contagem do catálogo após a ampliação: 193 decisões sobre trechos ligadas a 85 votações do texto
+principal, de 74 proposições. Elas aparecem sob 75 IDs de origem porque a PEC 45/2019 tem dois IDs nos
+Dados Abertos (259094 e 2196833).
+
+Regras de redação que valem para todas as revisões:
+
+- Resultado: a descrição da API decide ("Mantido" → mantido, "Suprimido" → retirado, "Rejeitada" →
+  rejeitada, "Aprovada" → aprovada) e o campo `aprovacao`, quando existe, tem de concordar; sem as
+  duas coisas a decisão é recusada.
+- Bloco e signatário são informações distintas: quando o relatório nominal atribui o destaque a um
+  bloco ("BLOCO PL", "BL. PL, FDR. PT…"), o resumo cita o bloco como consta no relatório e, à parte,
+  quem assinou o requerimento, com partido e UF.
+- Texto conferido: a evidência registra qual versão foi lida. Quando o substitutivo publicado é imagem,
+  vale OCR conferido contra o texto anexo ao parecer, ou o próprio texto anexo ao parecer adotado, com
+  o motivo registrado.
+- Rótulos de resultado seguem o objeto ("Capítulo mantido", "Alínea mantida", "Inclusão rejeitada" etc.).
 
 Achado: na sessão do PL 1.625/2026, o relatório nominal das 21:56 (ideVotacao 13736) registra
 182 × 182 para o mesmo destaque da emenda nº 2, que aparece nos Dados Abertos como

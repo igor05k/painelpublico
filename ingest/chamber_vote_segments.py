@@ -75,9 +75,7 @@ def build_segments(items, inventory_entries, reviews, *, cache, collect, refresh
         record = payload['dados']
         if record.get('id') != identifier or record.get('data') != entry['date']:
             raise CollectionError(f'{identifier}: registro da API não confirma a decisão.')
-        approval = record.get('aprovacao')
-        expected = {1: {'approved'}, 0: {'rejected'}, None: {'kept', 'removed'}}.get(approval)
-        if expected is None or review['outcome'] not in expected:
+        if review['outcome'] != api_outcome(record.get('descricao'), record.get('aprovacao')):
             raise CollectionError(f'{identifier}: resultado da revisão diverge do registro da API.')
 
         content, report_source = _source_bytes(safe_sources['rollCall'], cache / 'reports' / f'{identifier}.html',
@@ -137,3 +135,19 @@ def _roll_call_number(url):
     """Número sequencial do relatório nominal (ideVotacao), quando o link o traz."""
     match = re.search(r'[?&]ideVotacao=(\d+)', url or '')
     return int(match.group(1)) if match else None
+
+
+# A descrição da API diz o resultado de forma explícita ("Mantido o texto", "Suprimido o texto",
+# "Rejeitada a Emenda...", "Aprovadas as Emendas..."); o campo aprovacao, quando existe, tem de concordar.
+_DESCRIBED_OUTCOMES = (('mantid', 'kept'), ('suprimid', 'removed'), ('rejeitad', 'rejected'), ('aprovad', 'approved'))
+_APPROVAL_OUTCOMES = {1: {'approved'}, 0: {'rejected'}, None: {'kept', 'removed'}}
+
+
+def api_outcome(description, approval):
+    """Resultado que a API afirma para a decisão, ou None quando as fontes da API não bastam ou se contradizem."""
+    first = str(description or '').strip().split(' ', 1)[0].casefold()
+    described = next((outcome for prefix, outcome in _DESCRIBED_OUTCOMES if first.startswith(prefix)), None)
+    allowed = _APPROVAL_OUTCOMES.get(approval)
+    if described is None or allowed is None or described not in allowed:
+        return None
+    return described

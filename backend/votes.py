@@ -73,7 +73,8 @@ def _count(value, *, nullable=False):
 
 
 def _tally(value):
-    if not isinstance(value, dict) or any(not _count(value.get(key), nullable=True)
+    # As quatro chaves são obrigatórias; null é "não publicado", nunca zero.
+    if not isinstance(value, dict) or any(key not in value or not _count(value[key], nullable=True)
                                           for key in ('yes', 'no', 'abstention', 'total')):
         return None
     return {key: value[key] for key in ('yes', 'no', 'abstention', 'total')}
@@ -129,9 +130,8 @@ def _summary_item(value):
     if value.get('outcome') not in _OUTCOMES | {None}:
         return None
 
-    tally = value.get('tally')
-    if not isinstance(tally, dict) or any(not _count(tally.get(key), nullable=True)
-                                          for key in ('yes', 'no', 'abstention', 'total')):
+    tally = _tally(value.get('tally'))
+    if tally is None:
         return None
     themes = value.get('themes')
     if not isinstance(themes, list):
@@ -175,8 +175,7 @@ def _summary_item(value):
     if 'related' in value and (
             not isinstance(related, dict) or not _VOTE_ID.fullmatch(str(related.get('id', '')))
             or related.get('relation') not in {'approvedAfter', 'rejectedBefore'}
-            or related.get('outcome') not in _OUTCOMES or not isinstance(related.get('tally'), dict)
-            or any(not _count(related['tally'].get(key), nullable=True) for key in ('yes', 'no', 'abstention', 'total'))):
+            or related.get('outcome') not in _OUTCOMES or _tally(related.get('tally')) is None):
         return None
     notes = value.get('dataNotes')
     if 'dataNotes' in value and (not isinstance(notes, list) or len(notes) > 4
@@ -194,7 +193,7 @@ def _summary_item(value):
         'id': value['id'], 'date': value['date'], 'proposition': value['proposition'], 'type': value['type'],
         'title': value['title'], 'summary': value['summary'], 'decisionLabel': value['decisionLabel'],
         'yesMeaning': value['yesMeaning'], 'noMeaning': value['noMeaning'], 'outcome': value['outcome'],
-        'tally': {key: tally[key] for key in ('yes', 'no', 'abstention', 'total')},
+        'tally': tally,
         'themes': safe_themes, 'sources': safe_sources, 'reviewedAt': value['reviewedAt'],
         **({'dataNotes': notes} if 'dataNotes' in value else {}),
         **({'segments': segments} if 'segments' in value else {}),

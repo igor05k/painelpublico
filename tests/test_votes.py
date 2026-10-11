@@ -310,6 +310,14 @@ class VoteSnapshotTests(unittest.TestCase):
             with self.subTest(changes=changes):
                 self.write(self.index, self.segment_snapshot(**changes))
                 self.assertFalse(votes.listing({}, self.index)['available'])
+        missing = self.segment_snapshot()
+        del missing['items'][0]['segments'][0]['tally']['abstention']
+        self.write(self.index, missing)
+        self.assertFalse(votes.listing({}, self.index)['available'])
+        self.assertIsNone(votes.detail('2611313-35', self.index))
+        main_missing = snapshot([{**self.items[0], 'tally': {'yes': 10, 'no': 2, 'total': 12}}])
+        self.write(self.index, main_missing)
+        self.assertFalse(votes.listing({}, self.index)['available'])
         data = self.segment_snapshot()
         data['coverage']['segmentCount'] = 2
         self.write(self.index, data)
